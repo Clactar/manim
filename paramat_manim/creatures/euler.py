@@ -1,24 +1,20 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-import shutil
+from pathlib import Path
 from typing import Optional
 
 import numpy as np
 from manim import (
-    BLACK,
     BLUE,
-    RIGHT,
     UL,
     UP,
     UR,
     Arc,
     Circle,
-    Dot,
     Ellipse,
     Line,
-    MathTex,
-    Text,
+    SVGMobject,
     VGroup,
     normalize,
 )
@@ -26,18 +22,15 @@ from manim import (
 
 @dataclass(frozen=True)
 class EulerCreatureStyle:
-    body_color: str = BLUE
-    body_scale: float = 8.2
-    body_font: str = "Helvetica"
-    use_tex: Optional[bool] = None  # None => auto (uses TeX only if `latex` is available)
-    pupil_color: str = BLACK
-    eye_scale: float = 1.5
-    pupil_scale: float = 0.75
-    glint_scale: float = 0.2
-    eye_spacing: float = 0.001
-    eye_up_buff: float = -0.02
-    mouth_shift: np.ndarray = field(default_factory=lambda: np.array([-0.9, 0.5, 0.0]))
-    mouth_scale: float = 1.0
+    """
+    Style options for EulerCreature.
+
+    Default is to use the bundled SVG assets (matches your old repo output).
+    """
+
+    color: str = BLUE  # currently unused when using SVG (SVG has baked colors)
+    scale: float = 1.0
+    use_svg: Optional[bool] = None  # None => auto (use SVG if assets exist)
 
 
 class EulerCreature(VGroup):
@@ -52,71 +45,59 @@ class EulerCreature(VGroup):
 
     def __init__(self, color: str = BLUE, style: Optional[EulerCreatureStyle] = None, **kwargs):
         super().__init__(**kwargs)
-        self.style = style or EulerCreatureStyle(body_color=color)
+        self.style = style or EulerCreatureStyle(color=color)
 
-        # Body
-        use_tex = self.style.use_tex
-        if use_tex is None:
-            use_tex = shutil.which("latex") is not None
+        assets_dir = Path(__file__).resolve().parents[1] / "assets" / "creatures" / "e"
+        happy_svg = assets_dir / "shappy.svg"
+        think_svg = assets_dir / "squest.svg"
+        angry_svg = assets_dir / "sangry.svg"
 
-        if use_tex:
-            self.body = MathTex("e", color=self.style.body_color).scale(self.style.body_scale)
-        else:
-            self.body = Text("e", color=self.style.body_color, font=self.style.body_font).scale(self.style.body_scale)
+        use_svg = self.style.use_svg
+        if use_svg is None:
+            use_svg = happy_svg.exists()
 
-        # Eyes (sclera)
-        self.left_eye = Dot(color="WHITE").scale(self.style.eye_scale).next_to(
-            self.body, UP, buff=self.style.eye_up_buff
-        )
-        self.right_eye = Dot(color="WHITE").scale(self.style.eye_scale).next_to(
-            self.left_eye, RIGHT, buff=-self.style.eye_spacing
-        )
+        if not use_svg:
+            raise RuntimeError(
+                "EulerCreature expects SVG assets. Missing "
+                f"`{happy_svg}`. Reinstall or ensure assets are present."
+            )
 
-        # Pupils (black + glint)
-        self.left_pupil = Dot(color=self.style.pupil_color).scale(self.style.pupil_scale).move_to(self.left_eye)
-        self.left_glint = Dot(color="WHITE").scale(self.style.glint_scale).next_to(
-            self.left_pupil, UR, buff=-0.05
-        )
-        self.right_pupil = Dot(color=self.style.pupil_color).scale(self.style.pupil_scale).move_to(self.right_eye)
-        self.right_glint = Dot(color="WHITE").scale(self.style.glint_scale).next_to(
-            self.right_pupil, UR, buff=-0.05
-        )
+        base = SVGMobject(str(happy_svg))
 
-        # Mouth (default: happy)
-        self.mouth = Text("(").rotate(np.pi / 2).next_to(self.body, buff=0).shift(self.style.mouth_shift)
-        if self.style.mouth_scale != 1.0:
-            self.mouth.scale(self.style.mouth_scale)
+        # Layout matches your old `studeo_creature.py` slicing:
+        # body: [0:4], left_white: [4], left_pupil: [5:7],
+        # right_white: [7], right_pupil: [8:10], mouth: [10]
+        self.body = base[0:4].copy()
+        self.left_white = base[4].copy()
+        self.left_pupil = base[5:7].copy()
+        self.right_white = base[7].copy()
+        self.right_pupil = base[8:10].copy()
+        self.mouth = base[10].copy()
 
-        self.add(
-            self.body,
-            self.left_eye,
-            self.right_eye,
-            self.left_pupil,
-            self.left_glint,
-            self.right_pupil,
-            self.right_glint,
-            self.mouth,
-        )
+        self.add(self.body, self.left_white, self.right_white, self.left_pupil, self.right_pupil, self.mouth)
+
+        if self.style.scale != 1.0:
+            self.scale(self.style.scale)
+
+        # Cache mouth templates for expressions (scaled/moved at swap time)
+        self._mouth_templates = {
+            "happy": SVGMobject(str(happy_svg))[10],
+            "thinking": SVGMobject(str(think_svg))[10],
+            "angry": SVGMobject(str(angry_svg))[10],
+        }
 
     # -------------------------------------------------------------------------
     # Parts helpers
     # -------------------------------------------------------------------------
 
-    def get_body(self) -> MathTex:
+    def get_body(self):
         return self.body
 
     def get_eyes(self) -> VGroup:
-        return VGroup(
-            self.left_eye,
-            self.right_eye,
-            self.left_pupil,
-            self.left_glint,
-            self.right_pupil,
-            self.right_glint,
-        )
+        return VGroup(self.left_white, self.right_white, self.left_pupil, self.right_pupil)
 
     def get_pupils(self) -> VGroup:
-        return VGroup(self.left_pupil, self.left_glint, self.right_pupil, self.right_glint)
+        return VGroup(self.left_pupil, self.right_pupil)
 
     # -------------------------------------------------------------------------
     # Eye animations / pose helpers
@@ -133,65 +114,56 @@ class EulerCreature(VGroup):
             submob.apply_function(lambda p: np.array([p[0], bottom_y, p[2]]))
         return self
 
-    def _max_pupil_offset(self) -> float:
-        # Approximate: sclera radius - pupil radius.
-        sclera_r = self.left_eye.get_width() / 2
-        pupil_r = self.left_pupil.get_width() / 2
-        return max(0.0, sclera_r - pupil_r - 0.02 * sclera_r)
-
     def look_in_direction(self, target: np.ndarray) -> "EulerCreature":
         """
         Move pupils towards a target point, clamped so they remain inside the sclera.
         """
-        max_offset = self._max_pupil_offset()
-        eyes_center = VGroup(self.left_eye, self.right_eye).get_center()
-        direction = normalize(target - eyes_center)
-        offset = direction * max_offset
+        coeff = min(
+            self.left_white.get_width(),
+            self.left_white.get_height(),
+            self.left_pupil.get_width(),
+            self.left_pupil.get_height(),
+        ) / 2
+        eyes_center = VGroup(self.left_white, self.right_white, self.left_pupil, self.right_pupil).get_center()
+        direction = normalize(target - eyes_center) * coeff
 
-        self.left_pupil.move_to(self.left_eye.get_center() + offset)
-        self.left_glint.next_to(self.left_pupil, UR, buff=-0.05)
-        self.right_pupil.move_to(self.right_eye.get_center() + offset)
-        self.right_glint.next_to(self.right_pupil, UR, buff=-0.05)
+        left_center = self.left_white.get_center()
+        right_center = self.right_white.get_center()
+        self.left_pupil.move_to(left_center + direction)
+        self.right_pupil.move_to(right_center + direction)
         return self
 
     def look_at(self, mob) -> "EulerCreature":
         return self.look_in_direction(mob.get_center())
 
     def look_reset(self) -> "EulerCreature":
-        self.left_pupil.move_to(self.left_eye)
-        self.left_glint.next_to(self.left_pupil, UR, buff=-0.05)
-        self.right_pupil.move_to(self.right_eye)
-        self.right_glint.next_to(self.right_pupil, UR, buff=-0.05)
+        self.left_pupil.move_to(self.left_white.get_center())
+        self.right_pupil.move_to(self.right_white.get_center())
         return self
 
     # -------------------------------------------------------------------------
     # Expressions
     # -------------------------------------------------------------------------
 
+    def _swap_mouth(self, key: str) -> None:
+        tmpl = self._mouth_templates[key].copy()
+        tmpl.set(width=self.mouth.get_width())
+        tmpl.move_to(self.mouth)
+        self.mouth.become(tmpl)
+
     def happy(self) -> "EulerCreature":
-        new_mouth = Text("(").rotate(np.pi / 2).move_to(self.mouth)
-        new_mouth.set(width=self.mouth.get_width())
-        self.mouth.become(new_mouth)
+        self._swap_mouth("happy")
         return self
 
     def happy_reset(self) -> "EulerCreature":
         return self.happy().look_reset()
 
     def angry(self) -> "EulerCreature":
-        # Simple angry mouth + slightly squashed eyes (visual cue)
-        new_mouth = Text("(").rotate(-np.pi / 2).move_to(self.mouth)
-        new_mouth.set(width=self.mouth.get_width())
-        self.mouth.become(new_mouth)
-        self.left_eye.stretch_to_fit_height(self.left_eye.get_height() * 0.9)
-        self.right_eye.stretch_to_fit_height(self.right_eye.get_height() * 0.9)
+        self._swap_mouth("angry")
         return self
 
     def thinking(self) -> "EulerCreature":
-        new_mouth = Text("/").rotate(-np.pi / 3).move_to(self.mouth)
-        new_mouth.set(width=self.mouth.get_width())
-        self.mouth.become(new_mouth)
-        self.left_eye.stretch_to_fit_width(self.left_eye.get_width() * 1.1)
-        self.right_eye.stretch_to_fit_width(self.right_eye.get_width() * 1.1)
+        self._swap_mouth("thinking")
         return self
 
     # -------------------------------------------------------------------------
@@ -199,7 +171,7 @@ class EulerCreature(VGroup):
     # -------------------------------------------------------------------------
 
     def _scale_bubble_content(self, content) -> None:
-        a = 1.5 * self.get_height() / max(content.get_height(), content.get_width())
+        a = 2.0 * self.get_height() / max(content.get_height(), content.get_width())
         content.scale(a)
 
     def right_speech_bubble(self, content):
@@ -211,7 +183,7 @@ class EulerCreature(VGroup):
         ellipse.stretch_to_fit_width(1.2 * max(content.get_width(), content.get_height() / 2))
         ellipse.move_to(content).scale(1.2)
 
-        tail_start = self.get_center() + UR * 0.6
+        tail_start = self.get_corner(UR) + self.get_height() / 10 * UP
         left_line = Line(tail_start, ellipse.get_start())
         right_line = Line(tail_start, ellipse.get_end())
         outline = VGroup(ellipse, left_line, right_line).set_stroke(width=1)
@@ -226,7 +198,7 @@ class EulerCreature(VGroup):
         ellipse.stretch_to_fit_width(1.2 * max(content.get_width(), content.get_height() / 2))
         ellipse.move_to(content).scale(1.2)
 
-        tail_start = self.get_center() + UL * 0.6
+        tail_start = self.get_corner(UL) + self.get_height() / 10 * UP
         left_line = Line(tail_start, ellipse.get_start())
         right_line = Line(tail_start, ellipse.get_end())
         outline = VGroup(ellipse, left_line, right_line).set_stroke(width=1)
