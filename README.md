@@ -33,5 +33,6 @@ Exemple (qualité low pour tests) :
 ```
 
 Notes:
+
 - La démo de créature **n’utilise pas LaTeX**.
 - Pour `MathTex/Tex` dans tes vraies vidéos, installe LaTeX (ex: MacTeX/BasicTeX).

@@ -1,0 +1,5 @@
+Metadata-Version: 2.4
+Name: paramat-manim
+Version: 0.0.0
+Summary: Shared Manim utilities for Paramat videos
+Requires-Python: >=3.10

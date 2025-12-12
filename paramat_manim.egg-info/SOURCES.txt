@@ -1,0 +1,10 @@
+README.md
+pyproject.toml
+paramat_manim/__init__.py
+paramat_manim.egg-info/PKG-INFO
+paramat_manim.egg-info/SOURCES.txt
+paramat_manim.egg-info/dependency_links.txt
+paramat_manim.egg-info/top_level.txt
+paramat_manim/creatures/__init__.py
+paramat_manim/creatures/animations.py
+paramat_manim/creatures/euler.py
