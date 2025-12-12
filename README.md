@@ -1,26 +1,33 @@
 # Manim Videos (Paramat)
 
-Repo d'organisation des projets **Manim Community Edition** pour les vidéos YouTube.
+Repo pour les vidéos **Manim Community Edition** de la chaîne YouTube Paramat.
 
 ## Setup (macOS)
 
 ```bash
 cd "/Users/nicolasmasset/Desktop/ROOT/taff/Projets/Youtube/Manim Videos"
 python3 -m venv .venv
-.venv/bin/python -m pip install --upgrade pip
+.venv/bin/pip install --upgrade pip
 .venv/bin/pip install manim
 .venv/bin/pip install -e .
 ```
 
-Vérifier `ffmpeg` (requis pour encoder les vidéos) :
+### LaTeX (requis pour le beau "e" italique)
 
 ```bash
-ffmpeg -version
+brew install --cask basictex
+# Puis redémarrer le terminal
+```
+
+Sans LaTeX, le fallback utilise Times New Roman italic (moins joli).
+
+### FFmpeg (requis pour encoder les vidéos)
+
+```bash
+brew install ffmpeg
 ```
 
 ## Rendre une scène
-
-Exemple (qualité low pour tests) :
 
 ```bash
 .venv/bin/manim -pql videos/complexes/scenes.py SquareToCircle
@@ -32,7 +39,16 @@ Exemple (qualité low pour tests) :
 .venv/bin/manim -pql videos/complexes/scenes.py EulerCreatureDemo
 ```
 
-Notes:
+## Structure
 
-- La démo de créature **n’utilise pas LaTeX**.
-- Pour `MathTex/Tex` dans tes vraies vidéos, installe LaTeX (ex: MacTeX/BasicTeX).
+```
+paramat_manim/          # Module réutilisable (créature, helpers)
+  creatures/
+    euler.py            # EulerCreature (le "e" animé)
+    animations.py       # Blink, Look_Mobject, etc.
+videos/
+  complexes/            # Projet vidéo "Les Nombres Complexes"
+    scenes.py
+    assets/
+    audio/
+```
