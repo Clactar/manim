@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "paramat-manim"
+version = "0.0.0"
+description = "Shared Manim utilities for Paramat videos"
+requires-python = ">=3.10"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["paramat_manim*"]
+
+
