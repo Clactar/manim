@@ -34,3 +34,11 @@ class EulerCreatureDemo(Scene):
         self.play(FadeOut(bubble), FadeOut(target), FadeOut(e))
 
 
+class EulerCreatureStatic(Scene):
+    """Static scene for PNG export to check rendering."""
+    def construct(self):
+        e = EulerCreature().scale(0.6).to_corner(DL)
+        bubble = e.right_speech_bubble(Text("Salut !").scale(0.8))
+        self.add(e, bubble)
+
+
